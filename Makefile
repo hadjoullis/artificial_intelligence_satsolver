@@ -4,7 +4,7 @@ CFLAGS = -Wall -Werror -O0
 #LIBS = -lelf -lcapstone
 
 # Define the source files and the object files
-SRC_FILES = graph.c
+SRC_FILES = main.c graph.c
 OBJ_FILES = $(SRC_FILES:.c=.o)
 
 # Define the target executable
