@@ -1,25 +1,4 @@
-#include <errno.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <time.h>
-
-#define die(...)                                                               \
-  do {                                                                         \
-    fprintf(stderr, __VA_ARGS__);                                              \
-    fputc('\n', stderr);                                                       \
-    exit(EXIT_FAILURE);                                                        \
-  } while (0)
-
-#define BUF_LEN 1024
-
-typedef struct {
-  int32_t N;
-  float density;
-  u_int8_t **edges;
-} graph_t;
+#include "graph.h"
 
 void allocate_graph(graph_t *graph) {
   if (graph->N < 1 || (graph->density < 0.0f || graph->density > 1.0f)) {
@@ -113,6 +92,7 @@ void print_graph(graph_t *graph) {
   }
 }
 
+#ifdef DEBUG
 int main(int argc, char **argv) {
   if (argc != 2) {
     die("usage: ./a.out argument");
@@ -137,3 +117,4 @@ int main(int argc, char **argv) {
   deallocate_graph(&graph);
   return 0;
 }
+#endif
