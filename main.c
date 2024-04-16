@@ -1,6 +1,8 @@
 #include "graph.h"
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -28,41 +30,25 @@ void write_first_constraints(FILE *fp, graph_t *graph, int node_index) {
   }
 }
 
-int count_second_constraints(graph_t *graph, int node_index) {
-  int i, clauses_count = 0;
-  for (i = 0; i < graph->N; i++) {
-    if (graph->edges[i][node_index]) {
-      clauses_count++;
-      break; // even if there's n adjacent nodes, we only create one clause
-    }
-  }
-  return clauses_count;
-}
-
 void write_second_constraints(FILE *fp, graph_t *graph, int node_index) {
-  bool first_time = true;
+  fprintf(fp, "%d ", node_index + 1);
   int i;
   for (i = 0; i < graph->N; i++) {
     if (graph->edges[i][node_index]) {
-      if (first_time) {
-        fprintf(fp, "%d ", node_index + 1);
-        first_time = false;
-      }
       fprintf(fp, "%d ", i + 1);
     }
   }
-
-  if (!first_time) {
-    fprintf(fp, "0\n");
-  }
+  fprintf(fp, "0\n");
 }
 
 void write_clauses(graph_t *graph) {
   int i, clauses_cnt = 0;
+  // count first constraints is equal to the number of edges
   for (i = 0; i < graph->N; i++) {
     clauses_cnt += count_first_constraints(graph, i);
-    clauses_cnt += count_second_constraints(graph, i);
   }
+  // count second constraints is equal to the number of nodes
+  clauses_cnt += graph->N;
 
   FILE *fp = fopen(filename, "w");
   if (fp == NULL) {
@@ -78,7 +64,44 @@ void write_clauses(graph_t *graph) {
   fclose(fp);
 }
 
-void run_satsolver() {
+void print_solution(char *solution, int N) {
+  char in_kernel[BUF_LEN] = "in kernel: ";
+  char not_in_kernel[BUF_LEN] = "not in kernel: ";
+  // need to cycle though N vars
+  // skip first two bytes "v "
+  char *endptr = solution + 2;
+
+  long var;
+  int i;
+  for (i = 0; i < N; i++) {
+    if (endptr[0] == '\n') {
+      endptr++;
+    }
+    if (endptr[0] == 'v') {
+      endptr++;
+    }
+    if (endptr[0] == ' ') {
+      endptr++;
+    }
+
+    if (isdigit(endptr[0])) {
+      var = strtol(endptr, &endptr, 10);
+      sprintf(in_kernel + strlen(in_kernel), "%ld ", var - 1);
+      continue;
+    }
+
+    if (endptr[0] == '-') {
+      var = strtol(endptr + 1, &endptr, 10);
+      sprintf(not_in_kernel + strlen(not_in_kernel), "%ld ", var - 1);
+      continue;
+    }
+  }
+
+  fprintf(stdout, "%s\n", in_kernel);
+  fprintf(stdout, "%s\n", not_in_kernel);
+}
+
+void run_satsolver(graph_t *graph) {
   int fd[2];
   if (pipe(fd) == -1) {
     die("run_satsolver: %s", strerror(errno));
@@ -105,33 +128,36 @@ void run_satsolver() {
   // parent
   close(fd[1]);
 
-  char buffer[BUF_LEN]; // Buffer to store data read from the pipe
+  if (waitpid(pid, NULL, 0) == -1) {
+    die("waitpid: %s", strerror(errno));
+  }
+
+  // read after termination, to read whole lingeling output at once
+  char buffer[BUF_LEN];
+  char *solution = NULL;
   ssize_t bytes_read;
-  bool unsat = true;
 
   // read data from the pipe until EOF
   while ((bytes_read = read(fd[0], buffer, sizeof(buffer))) > 0) {
-    fprintf(stdout, "bytes read: %zd\n", bytes_read);
-    if (strstr(buffer, "s SATISFIABLE") != NULL) {
-      unsat = false;
-    }
+    // fprintf(stdout, "bytes read: %zd\n", bytes_read);
+    // fprintf(stdout, "%s", buffer);
+    solution = strstr(buffer, "s SATISFIABLE");
   }
   if (bytes_read == -1) {
     die("run_satsolver: %s", strerror(errno));
   }
-
-  if (waitpid(pid, NULL, 0) == -1) {
-    die("waitpid: %s", strerror(errno));
-  }
-  // Close the read end of the pipe
+  // close the read end of the pipe
   close(fd[0]);
 
-  if(unsat) {
-    fprintf(stdout, "not solved\n");
+  if (solution) {
+    solution += 14;
+    strstr(solution, " 0")[0] = '\0';
+    fprintf(stdout, "kernel problem is satisfiable\n");
+    print_solution(solution, graph->N);
+    return;
   }
-  else {
-    fprintf(stdout, "solved\n");
-  }
+
+  fprintf(stdout, "kernel problem is not satisfiable\n");
 }
 
 int main(int argc, char **argv) {
@@ -142,6 +168,8 @@ int main(int argc, char **argv) {
 
   if (atoi(argv[1]) == 0) {
     read_file(&graph);
+    // fprintf(stdout, "graph read: \n");
+    // print_graph(&graph);
   } else {
     fprintf(stderr, "Provide N and density: ");
 
@@ -152,11 +180,12 @@ int main(int argc, char **argv) {
     graph.density = strtof(endptr, NULL);
 
     randomly_initialize_graph(&graph);
+    // fprintf(stdout, "graph generated: \n");
+    // print_graph(&graph);
   }
-  print_graph(&graph);
 
   write_clauses(&graph);
-  run_satsolver();
+  run_satsolver(&graph);
 
   deallocate_graph(&graph);
   return 0;

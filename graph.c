@@ -73,6 +73,9 @@ void read_file(graph_t *graph) {
 
     endptr = buffer;
     for (j = 0; j < graph->N; j++) {
+      if (endptr[0] == ' ') {
+        endptr++;
+      }
       graph->edges[i][j] = (u_int8_t)strtol(endptr, &endptr, 10);
     }
   }
@@ -86,7 +89,7 @@ void print_graph(graph_t *graph) {
   int i, j;
   for (i = 0; i < graph->N; i++) {
     for (j = 0; j < graph->N; j++) {
-      fprintf(stdout, "[%u] ", graph->edges[i][j]);
+      fprintf(stdout, "%u ", graph->edges[i][j]);
     }
     fprintf(stdout, "\n");
   }
