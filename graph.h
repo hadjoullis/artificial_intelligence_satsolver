@@ -13,7 +13,7 @@
     exit(EXIT_FAILURE);                                                        \
   } while (0)
 
-#define BUF_LEN 1024
+#define BUF_LEN 4096
 
 typedef struct {
   int32_t N;
