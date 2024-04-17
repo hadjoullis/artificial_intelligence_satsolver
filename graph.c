@@ -35,7 +35,7 @@ void randomly_initialize_graph(graph_t *graph) {
   for (i = 0; i < graph->N; i++) {
     for (j = 0; j < graph->N; j++) {
       graph->edges[i][j] =
-          (((float)rand() / (float)RAND_MAX) > graph->density) ? 1 : 0;
+          (((float)rand() / (float)RAND_MAX) < graph->density) ? 1 : 0;
     }
   }
 

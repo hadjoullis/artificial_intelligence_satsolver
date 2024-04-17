@@ -150,14 +150,14 @@ void run_satsolver(graph_t *graph) {
   close(fd[0]);
 
   if (solution) {
-    solution += 14;
+    solution += 14; // jump 14 bytes to skip "s SATISFIABLE\n"
     strstr(solution, " 0")[0] = '\0';
-    fprintf(stdout, "kernel problem is satisfiable\n");
+    fprintf(stdout, "\nkernel problem is satisfiable\n");
     print_solution(solution, graph->N);
     return;
   }
 
-  fprintf(stdout, "kernel problem is not satisfiable\n");
+  fprintf(stdout, "\nkernel problem is not satisfiable\n");
 }
 
 int main(int argc, char **argv) {
@@ -168,8 +168,8 @@ int main(int argc, char **argv) {
 
   if (atoi(argv[1]) == 0) {
     read_file(&graph);
-    // fprintf(stdout, "graph read: \n");
-    // print_graph(&graph);
+    fprintf(stdout, "graph read: \n");
+    print_graph(&graph);
   } else {
     fprintf(stderr, "Provide N and density: ");
 
@@ -180,8 +180,8 @@ int main(int argc, char **argv) {
     graph.density = strtof(endptr, NULL);
 
     randomly_initialize_graph(&graph);
-    // fprintf(stdout, "graph generated: \n");
-    // print_graph(&graph);
+    fprintf(stdout, "graph generated: \n");
+    print_graph(&graph);
   }
 
   write_clauses(&graph);
