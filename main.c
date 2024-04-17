@@ -166,11 +166,12 @@ int main(int argc, char **argv) {
   }
   graph_t graph;
 
-  if (atoi(argv[1]) == 0) {
+  int argument = atoi(argv[1]);
+  if (argument == 0) {
     read_file(&graph);
     fprintf(stdout, "graph read: \n");
     print_graph(&graph);
-  } else {
+  } else if (argument == 1) {
     fprintf(stderr, "Provide N and density: ");
 
     char buffer[BUF_LEN] = "";
@@ -182,6 +183,9 @@ int main(int argc, char **argv) {
     randomly_initialize_graph(&graph);
     fprintf(stdout, "graph generated: \n");
     print_graph(&graph);
+  }
+  else {
+    die("argument must be of value 0 or 1");
   }
 
   write_clauses(&graph);
